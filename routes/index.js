@@ -1,5 +1,5 @@
 var FlightSchema = require('../schemas/flight');
-
+var passport = require('../auth');
 var flight = require('../flight');
 var flights = require('../data');
 var express = require('express');
@@ -35,6 +35,10 @@ router.get('/', function(req, res, next) {
 
 router.get('/flight/:number', function (req, res) {
 	var number = req.param('number');
+
+  req.session.lastNumber = number;
+  //req.send();
+
 	if (typeof flights[number] === 'undefined') {
 		res.status(404).json({status: 'error'});
 	} else {
@@ -79,6 +83,40 @@ router.get('/list', function (req, res) {
 	res.render('list', {title: 'All flights',
                         flights: flights
     })
+});
+
+router.get('/arrivals', function (req, res) {
+   FlightSchema.find()
+   .setOptions({sort: 'actualArrive'})
+   .exec(function(err, arrivals) {
+   	 if (err) {
+   	 	console.log(err);
+   	 	res.status(500).json({status: 'failure'});
+   	 } else {
+   	 	res.render('arrivals', {
+   	 		title: 'Arrivals',
+   	 		arrivals: arrivals,
+        lastNumber: req.session.lastNumber
+   	 	});
+   	 }
+   });
+});
+
+router.get('/login', function (req, res) {
+  res.render('login', {title: 'Log in'});
+});
+
+router.post('/login', passport.authenticate('local', {
+  failureRedirect: '/login',
+  successRedirect: '/user'
+}));
+
+router.get('/user', function (req, res) {
+  if (req.session.passport.user === undefined) {
+    res.redirect('/login');
+  } else {
+    res.render('user', {title: 'Welcome!', user: req.user })
+  }
 });
 
 // router.get('/flight1', function (req, res) {
