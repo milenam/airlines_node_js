@@ -1,4 +1,22 @@
 var FlightSchema = require('../schemas/flight');
+var Emitter = require('events').EventEmitter;
+
+var flightEmitter = new Emitter();
+
+flightEmitter.on('arrival', function(flight) {
+  var record = new FlightSchema(flight.getInformation());
+  record.save(function(err) {
+      if(err) {
+        console.log(err);
+        //res.status(500).json({status: 'failure'})
+      }
+  });
+});
+
+flightEmitter.on('arrival', function(flight) {
+  console.log("Flight arrived" + flight.data.number);
+});
+
 var passport = require('../auth');
 var flight = require('../flight');
 var flights = require('../data');
@@ -63,16 +81,8 @@ router.put('/flight/:number/arrived', function (req, res) {
 	} else {
 		flights[number].triggerArrive();
 
-		var record = new FlightSchema(flights[number].getInformation());
-
-        record.save(function(err) {
-            if(err) {
-            	console.log(err);
-            	res.status(500).json({status: 'failure'})
-            } else {
-            	res.json({status: 'success'});
-            }
-        });
+    flightEmitter.emit('arrival', flights[number]);
+    res.json({status: 'success'});
 
         //res.json({status: 'done'});
 	}
